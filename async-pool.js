@@ -1,43 +1,34 @@
 class AsyncPool {
-
     constructor(){
         this.limit = 10;
         this.queue = [];
-        this.activeCount = 0;
-    }
-
-    add(task){
-        return new Promise((resolve, reject) => {
-            this.queue.push(() => task().then(resolve).catch(reject));
-            this.runNext();
-        })
+        this.inProgress = 0;
     };
 
-    runNext(){
-        if (this.activeCount >= this.limit || this.queue.length == 0) return;
-        
-        this.activeCount++;
-        const task = this.queue.shift();
+    async add(task){
+        this.queue.push(task);
+        await this.runNext();
+    };
 
-        task().finally(() => {
-            this.activeCount--;
-            this.runNext();
-        });
+    async runNext(){
+        if (this.inProgress >= 10 || this.queue.length == 0) return;
+        const task = this.queue.shift();
+        this.inProgress++;
+        await task();
+        this.inProgress--;
+        this.runNext();
     };
 };
 
 let pool = new AsyncPool();
 
-async function task(){
+const task = async() => {
     console.log('start task');
-    await new Promise((resolve, reject) => {
-        setTimeout(() => {
-            console.log('end task');
-            resolve();
-        }, 1000);
-    });
+    await setTimeout(() => {
+        console.log("end task");
+    }, "1 second");
 }
 
-for (let i = 0; i < 100; i++){
+for (let i = 0; i < 20; i++){
     pool.add(task);
 }
